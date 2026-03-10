@@ -1,36 +1,35 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="MauiApp1.MainPage">
 
-    <ScrollView>
-        <VerticalStackLayout
-            Padding="30,0"
-            Spacing="25">
-            <Image
-                Source="dotnet_bot.png"
-                HeightRequest="185"
-                Aspect="AspectFit"
-                SemanticProperties.Description="dot net bot in a submarine number ten" />
+    <VerticalStackLayout Padding="24" Spacing="16">
+        <Label x:Name="StatusLabel"
+               Text="Tour de X"
+               FontSize="24"
+               HorizontalOptions="Center" />
 
-            <Label
-                Text="Hello, World!"
-                Style="{StaticResource Headline}"
-                SemanticProperties.HeadingLevel="Level1" />
+        <Grid RowDefinitions="Auto,Auto,Auto"
+              ColumnDefinitions="Auto,Auto,Auto"
+              RowSpacing="8"
+              ColumnSpacing="8"
+              HorizontalOptions="Center">
+            <Button x:Name="Cell0" Grid.Row="0" Grid.Column="0" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+            <Button x:Name="Cell1" Grid.Row="0" Grid.Column="1" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+            <Button x:Name="Cell2" Grid.Row="0" Grid.Column="2" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
 
-            <Label
-                Text="Welcome to &#10;.NET Multi-platform App UI"
-                Style="{StaticResource SubHeadline}"
-                SemanticProperties.HeadingLevel="Level2"
-                SemanticProperties.Description="Welcome to dot net Multi platform App U I" />
+            <Button x:Name="Cell3" Grid.Row="1" Grid.Column="0" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+            <Button x:Name="Cell4" Grid.Row="1" Grid.Column="1" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+            <Button x:Name="Cell5" Grid.Row="1" Grid.Column="2" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
 
-            <Button
-                x:Name="CounterBtn"
-                Text="Click me" 
-                SemanticProperties.Hint="Counts the number of times you click"
-                Clicked="OnCounterClicked"
-                HorizontalOptions="Fill" />
-        </VerticalStackLayout>
-    </ScrollView>
+            <Button x:Name="Cell6" Grid.Row="2" Grid.Column="0" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+            <Button x:Name="Cell7" Grid.Row="2" Grid.Column="1" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+            <Button x:Name="Cell8" Grid.Row="2" Grid.Column="2" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+        </Grid>
+
+        <Button Text="Recommencer"
+                Clicked="OnRestartClicked"
+                HorizontalOptions="Center" />
+    </VerticalStackLayout>
 
 </ContentPage>
