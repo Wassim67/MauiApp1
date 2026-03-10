@@ -1,34 +1,46 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="MauiApp1.MainPage">
+             xmlns:models="clr-namespace:MauiApp1.Models"
+             xmlns:viewModels="clr-namespace:MauiApp1.ViewModels"
+             x:Class="MauiApp1.MainPage"
+             x:Name="RootPage"
+             x:DataType="viewModels:MainViewModel">
+
+    <ContentPage.BindingContext>
+        <viewModels:MainViewModel />
+    </ContentPage.BindingContext>
 
     <VerticalStackLayout Padding="24" Spacing="16">
-        <Label x:Name="StatusLabel"
-               Text="Tour de X"
+        <Label Text="{Binding StatusMessage}"
                FontSize="24"
                HorizontalOptions="Center" />
 
-        <Grid RowDefinitions="Auto,Auto,Auto"
-              ColumnDefinitions="Auto,Auto,Auto"
-              RowSpacing="8"
-              ColumnSpacing="8"
-              HorizontalOptions="Center">
-            <Button x:Name="Cell0" Grid.Row="0" Grid.Column="0" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-            <Button x:Name="Cell1" Grid.Row="0" Grid.Column="1" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-            <Button x:Name="Cell2" Grid.Row="0" Grid.Column="2" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
+        <CollectionView ItemsSource="{Binding Cells}"
+                        SelectionMode="None"
+                        WidthRequest="286"
+                        HeightRequest="286">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical"
+                                 Span="3"
+                                 HorizontalItemSpacing="8"
+                                 VerticalItemSpacing="8" />
+            </CollectionView.ItemsLayout>
 
-            <Button x:Name="Cell3" Grid.Row="1" Grid.Column="0" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-            <Button x:Name="Cell4" Grid.Row="1" Grid.Column="1" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-            <Button x:Name="Cell5" Grid.Row="1" Grid.Column="2" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-
-            <Button x:Name="Cell6" Grid.Row="2" Grid.Column="0" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-            <Button x:Name="Cell7" Grid.Row="2" Grid.Column="1" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-            <Button x:Name="Cell8" Grid.Row="2" Grid.Column="2" WidthRequest="90" HeightRequest="90" FontSize="36" Clicked="OnCellClicked" />
-        </Grid>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:GameCell">
+                    <Button Text="{Binding Value}"
+                            FontSize="36"
+                            WidthRequest="90"
+                            HeightRequest="90"
+                            Command="{Binding Source={x:Reference RootPage}, Path=BindingContext.PlayCommand}"
+                            CommandParameter="{Binding .}" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
 
         <Button Text="Recommencer"
-                Clicked="OnRestartClicked"
+                Command="{Binding RestartCommand}"
                 HorizontalOptions="Center" />
     </VerticalStackLayout>
 
