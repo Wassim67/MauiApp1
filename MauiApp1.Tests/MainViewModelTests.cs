@@ -110,6 +110,23 @@ public class MainViewModelTests
         Assert.All(vm.Cells, cell => Assert.Equal(string.Empty, cell.Value));
         Assert.Equal("Ton tour (X)", vm.StatusMessage);
         Assert.Equal("Historique V/D/N : 1/0/0", vm.HistoryMessage);
+        Assert.Null(history.LoadCurrentGame());
+    }
+
+    [Fact]
+    public void NewViewModel_ShouldRestoreCurrentGame_FromService()
+    {
+        var history = new TestGameHistoryService();
+        var firstVm = CreateViewModel(new FakeBotPlayer(1), history);
+        firstVm.PlayCommand.Execute(firstVm.Cells[0]);
+
+        var restoredVm = CreateViewModel(new FakeBotPlayer(2), history);
+
+        Assert.Equal("X", restoredVm.Cells[0].Value);
+        Assert.Equal("O", restoredVm.Cells[1].Value);
+        Assert.Equal(2, restoredVm.MovesCount);
+        Assert.False(restoredVm.IsGameOver);
+        Assert.Equal("Ton tour (X)", restoredVm.StatusMessage);
     }
 
     [Fact]
@@ -139,6 +156,8 @@ public class MainViewModelTests
 
     private sealed class TestGameHistoryService : IGameHistoryService
     {
+        private CurrentGameState? _currentGame;
+
         public int Wins { get; private set; }
         public int Losses { get; private set; }
         public int Draws { get; private set; }
@@ -148,6 +167,25 @@ public class MainViewModelTests
         public void AddLoss() => Losses++;
 
         public void AddDraw() => Draws++;
+
+        public CurrentGameState? LoadCurrentGame() => _currentGame;
+
+        public void SaveCurrentGame(IReadOnlyList<GameCell> cells, int movesCount, bool isGameOver, string statusMessage)
+        {
+            var board = new string(cells.Select(c => string.IsNullOrEmpty(c.Value) ? '-' : c.Value[0]).ToArray());
+            _currentGame = new CurrentGameState
+            {
+                Board = board,
+                MovesCount = movesCount,
+                IsGameOver = isGameOver,
+                StatusMessage = statusMessage
+            };
+        }
+
+        public void ClearCurrentGame()
+        {
+            _currentGame = null;
+        }
     }
 
     private sealed class FakeBotPlayer : IBotPlayer

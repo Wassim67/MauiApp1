@@ -1,3 +1,5 @@
+using MauiApp1.Models;
+
 namespace MauiApp1.Services;
 
 public interface IGameHistoryService
@@ -9,4 +11,8 @@ public interface IGameHistoryService
     void AddWin();
     void AddLoss();
     void AddDraw();
+
+    CurrentGameState? LoadCurrentGame();
+    void SaveCurrentGame(IReadOnlyList<GameCell> cells, int movesCount, bool isGameOver, string statusMessage);
+    void ClearCurrentGame();
 }

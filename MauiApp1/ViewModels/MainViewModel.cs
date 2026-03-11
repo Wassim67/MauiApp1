@@ -41,6 +41,7 @@ public partial class MainViewModel : ObservableObject
             Cells.Add(new GameCell());
         }
 
+        RestoreCurrentGameIfAny();
         UpdateHistoryMessage();
     }
 
@@ -55,10 +56,12 @@ public partial class MainViewModel : ObservableObject
         ApplyMove(cell, HumanPlayer);
         if (TryEndGame(HumanPlayer))
         {
+            PersistCurrentGame();
             return;
         }
 
         PlayBotTurn();
+        PersistCurrentGame();
     }
 
     [RelayCommand]
@@ -72,6 +75,7 @@ public partial class MainViewModel : ObservableObject
         IsGameOver = false;
         MovesCount = 0;
         StatusMessage = "Ton tour (X)";
+        _gameHistoryService.ClearCurrentGame();
     }
 
     private void PlayBotTurn()
@@ -139,6 +143,31 @@ public partial class MainViewModel : ObservableObject
         }
 
         return false;
+    }
+
+    private void RestoreCurrentGameIfAny()
+    {
+        var state = _gameHistoryService.LoadCurrentGame();
+        if (state is null)
+        {
+            return;
+        }
+
+        var board = state.Board ?? string.Empty;
+        for (var i = 0; i < Cells.Count; i++)
+        {
+            var ch = i < board.Length ? board[i] : '-';
+            Cells[i].Value = ch is 'X' or 'O' ? ch.ToString() : string.Empty;
+        }
+
+        MovesCount = state.MovesCount;
+        IsGameOver = state.IsGameOver;
+        StatusMessage = state.StatusMessage;
+    }
+
+    private void PersistCurrentGame()
+    {
+        _gameHistoryService.SaveCurrentGame(Cells, MovesCount, IsGameOver, StatusMessage);
     }
 
     private bool HasWinner(string player)

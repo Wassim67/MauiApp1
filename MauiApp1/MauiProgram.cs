@@ -1,3 +1,4 @@
+using MauiApp1.Data;
 using MauiApp1.Players;
 using MauiApp1.Services;
 using MauiApp1.ViewModels;
@@ -21,7 +22,8 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        builder.Services.AddSingleton<IGameHistoryService, FakeGameHistoryService>();
+        builder.Services.AddSingleton<GameDatabase>();
+        builder.Services.AddSingleton<IGameHistoryService, SqliteGameHistoryService>();
         builder.Services.AddTransient<IBotPlayer, RandomBotPlayer>();
         builder.Services.AddTransient<MainViewModel>();
         builder.Services.AddTransient<MainPage>();
