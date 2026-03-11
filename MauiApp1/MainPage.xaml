@@ -7,13 +7,12 @@
              x:Name="RootPage"
              x:DataType="viewModels:MainViewModel">
 
-    <ContentPage.BindingContext>
-        <viewModels:MainViewModel />
-    </ContentPage.BindingContext>
-
     <VerticalStackLayout Padding="24" Spacing="16">
         <Label Text="{Binding StatusMessage}"
                FontSize="24"
+               HorizontalOptions="Center" />
+        <Label Text="{Binding HistoryMessage}"
+               FontSize="16"
                HorizontalOptions="Center" />
 
         <CollectionView ItemsSource="{Binding Cells}"

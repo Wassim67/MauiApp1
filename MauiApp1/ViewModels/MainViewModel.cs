@@ -1,16 +1,22 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MauiApp1.Models;
+using MauiApp1.Services;
 
 namespace MauiApp1.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    public ObservableCollection<GameCell> Cells { get; } = [];
+    private const string HumanPlayer = "X";
+    private const string BotPlayer = "O";
 
-    [ObservableProperty]
-    private bool isXTurn = true;
+    private readonly IGameHistoryService _gameHistoryService;
+    private readonly Random _random = new();
+
+    public ObservableCollection<GameCell> Cells { get; } = [];
 
     [ObservableProperty]
     private bool isGameOver;
@@ -19,14 +25,21 @@ public partial class MainViewModel : ObservableObject
     private int movesCount;
 
     [ObservableProperty]
-    private string statusMessage = "Tour de X";
+    private string statusMessage = "Ton tour (X)";
 
-    public MainViewModel()
+    [ObservableProperty]
+    private string historyMessage = "Historique V/D/N : 0/0/0";
+
+    public MainViewModel(IGameHistoryService gameHistoryService)
     {
+        _gameHistoryService = gameHistoryService;
+
         for (var i = 0; i < 9; i++)
         {
             Cells.Add(new GameCell());
         }
+
+        UpdateHistoryMessage();
     }
 
     [RelayCommand]
@@ -37,26 +50,13 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        var currentPlayer = IsXTurn ? "X" : "O";
-        cell.Value = currentPlayer;
-        MovesCount++;
-
-        if (HasWinner(currentPlayer))
+        ApplyMove(cell, HumanPlayer);
+        if (TryEndGame(HumanPlayer))
         {
-            StatusMessage = $"{currentPlayer} gagne !";
-            IsGameOver = true;
             return;
         }
 
-        if (MovesCount == 9)
-        {
-            StatusMessage = "Match nul.";
-            IsGameOver = true;
-            return;
-        }
-
-        IsXTurn = !IsXTurn;
-        StatusMessage = $"Tour de {(IsXTurn ? "X" : "O")}";
+        PlayBotTurn();
     }
 
     [RelayCommand]
@@ -67,10 +67,65 @@ public partial class MainViewModel : ObservableObject
             cell.Value = string.Empty;
         }
 
-        IsXTurn = true;
         IsGameOver = false;
         MovesCount = 0;
-        StatusMessage = "Tour de X";
+        StatusMessage = "Ton tour (X)";
+    }
+
+    private void PlayBotTurn()
+    {
+        var emptyCells = Cells.Where(c => string.IsNullOrEmpty(c.Value)).ToList();
+        if (emptyCells.Count == 0)
+        {
+            return;
+        }
+
+        var botCell = emptyCells[_random.Next(emptyCells.Count)];
+        ApplyMove(botCell, BotPlayer);
+
+        if (!TryEndGame(BotPlayer))
+        {
+            StatusMessage = "Ton tour (X)";
+        }
+    }
+
+    private void ApplyMove(GameCell cell, string player)
+    {
+        cell.Value = player;
+        MovesCount++;
+    }
+
+    private bool TryEndGame(string player)
+    {
+        if (HasWinner(player))
+        {
+            IsGameOver = true;
+
+            if (player == HumanPlayer)
+            {
+                _gameHistoryService.AddWin();
+                StatusMessage = "Tu as gagne !";
+            }
+            else
+            {
+                _gameHistoryService.AddLoss();
+                StatusMessage = "Le bot a gagne.";
+            }
+
+            UpdateHistoryMessage();
+            return true;
+        }
+
+        if (MovesCount == 9)
+        {
+            IsGameOver = true;
+            _gameHistoryService.AddDraw();
+            StatusMessage = "Match nul.";
+            UpdateHistoryMessage();
+            return true;
+        }
+
+        return false;
     }
 
     private bool HasWinner(string player)
@@ -98,5 +153,10 @@ public partial class MainViewModel : ObservableObject
         }
 
         return false;
+    }
+
+    private void UpdateHistoryMessage()
+    {
+        HistoryMessage = $"Historique V/D/N : {_gameHistoryService.Wins}/{_gameHistoryService.Losses}/{_gameHistoryService.Draws}";
     }
 }
