@@ -1,3 +1,4 @@
+using MauiApp1.Players;
 using MauiApp1.Services;
 using MauiApp1.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,7 @@ public static class MauiProgram
             });
 
         builder.Services.AddSingleton<IGameHistoryService, FakeGameHistoryService>();
+        builder.Services.AddTransient<IBotPlayer, RandomBotPlayer>();
         builder.Services.AddTransient<MainViewModel>();
         builder.Services.AddTransient<MainPage>();
 

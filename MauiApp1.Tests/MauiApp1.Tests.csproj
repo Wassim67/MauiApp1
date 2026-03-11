@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Compile Include="..\MauiApp1\Models\GameCell.cs" Link="AppCode\Models\GameCell.cs" />
+    <Compile Include="..\MauiApp1\Players\IBotPlayer.cs" Link="AppCode\Players\IBotPlayer.cs" />
     <Compile Include="..\MauiApp1\Services\IGameHistoryService.cs" Link="AppCode\Services\IGameHistoryService.cs" />
     <Compile Include="..\MauiApp1\ViewModels\MainViewModel.cs" Link="AppCode\ViewModels\MainViewModel.cs" />
   </ItemGroup>

@@ -4,6 +4,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MauiApp1.Models;
+using MauiApp1.Players;
 using MauiApp1.Services;
 
 namespace MauiApp1.ViewModels;
@@ -14,7 +15,7 @@ public partial class MainViewModel : ObservableObject
     private const string BotPlayer = "O";
 
     private readonly IGameHistoryService _gameHistoryService;
-    private readonly Random _random = new();
+    private readonly IBotPlayer _botPlayer;
 
     public ObservableCollection<GameCell> Cells { get; } = [];
 
@@ -30,9 +31,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string historyMessage = "Historique V/D/N : 0/0/0";
 
-    public MainViewModel(IGameHistoryService gameHistoryService)
+    public MainViewModel(IGameHistoryService gameHistoryService, IBotPlayer botPlayer)
     {
         _gameHistoryService = gameHistoryService;
+        _botPlayer = botPlayer;
 
         for (var i = 0; i < 9; i++)
         {
@@ -74,13 +76,24 @@ public partial class MainViewModel : ObservableObject
 
     private void PlayBotTurn()
     {
-        var emptyCells = Cells.Where(c => string.IsNullOrEmpty(c.Value)).ToList();
-        if (emptyCells.Count == 0)
+        var botMoveIndex = _botPlayer.GetNextMoveIndex(Cells);
+        if (botMoveIndex is null ||
+            botMoveIndex < 0 ||
+            botMoveIndex >= Cells.Count ||
+            !string.IsNullOrEmpty(Cells[botMoveIndex.Value].Value))
         {
-            return;
+            botMoveIndex = Cells
+                .Select((cell, index) => new { cell, index })
+                .FirstOrDefault(x => string.IsNullOrEmpty(x.cell.Value))
+                ?.index;
+
+            if (botMoveIndex is null)
+            {
+                return;
+            }
         }
 
-        var botCell = emptyCells[_random.Next(emptyCells.Count)];
+        var botCell = Cells[botMoveIndex.Value];
         ApplyMove(botCell, BotPlayer);
 
         if (!TryEndGame(BotPlayer))

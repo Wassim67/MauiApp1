@@ -1,5 +1,10 @@
+using System.Collections.Generic;
+using System.Linq;
+using MauiApp1.Models;
+using MauiApp1.Players;
 using MauiApp1.Services;
 using MauiApp1.ViewModels;
+using Xunit;
 
 namespace MauiApp1.Tests;
 
@@ -21,29 +26,25 @@ public class MainViewModelTests
     [Fact]
     public void HumanMove_ShouldPlaceX_AndThenBotShouldPlayO()
     {
-        var vm = CreateViewModel();
-        var firstCell = vm.Cells[0];
+        var vm = CreateViewModel(new FakeBotPlayer(1));
 
-        vm.PlayCommand.Execute(firstCell);
+        vm.PlayCommand.Execute(vm.Cells[0]);
 
-        Assert.Equal("X", firstCell.Value);
+        Assert.Equal("X", vm.Cells[0].Value);
+        Assert.Equal("O", vm.Cells[1].Value);
         Assert.Equal(2, vm.MovesCount);
-        Assert.Equal(1, vm.Cells.Count(c => c.Value == "X"));
-        Assert.Equal(1, vm.Cells.Count(c => c.Value == "O"));
         Assert.False(vm.IsGameOver);
         Assert.Equal("Ton tour (X)", vm.StatusMessage);
     }
 
     [Fact]
-    public void HumanWinningMove_ShouldEndGame_AndIncreaseWins()
+    public void HumanWinningSequence_ShouldEndGame_AndIncreaseWins()
     {
         var history = new TestGameHistoryService();
-        var vm = CreateViewModel(history);
+        var vm = CreateViewModel(new FakeBotPlayer(3, 4, 5), history);
 
-        vm.Cells[0].Value = "X";
-        vm.Cells[1].Value = "X";
-        vm.MovesCount = 2;
-
+        vm.PlayCommand.Execute(vm.Cells[0]);
+        vm.PlayCommand.Execute(vm.Cells[1]);
         vm.PlayCommand.Execute(vm.Cells[2]);
 
         Assert.True(vm.IsGameOver);
@@ -55,21 +56,15 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void DrawMove_ShouldEndGame_AndIncreaseDraws()
+    public void FullGameEndingInDraw_ShouldIncreaseDraws()
     {
         var history = new TestGameHistoryService();
-        var vm = CreateViewModel(history);
+        var vm = CreateViewModel(new FakeBotPlayer(1, 4, 5, 6), history);
 
-        vm.Cells[0].Value = "X";
-        vm.Cells[1].Value = "O";
-        vm.Cells[2].Value = "X";
-        vm.Cells[3].Value = "X";
-        vm.Cells[4].Value = "O";
-        vm.Cells[5].Value = "O";
-        vm.Cells[6].Value = "O";
-        vm.Cells[7].Value = "X";
-        vm.MovesCount = 8;
-
+        vm.PlayCommand.Execute(vm.Cells[0]);
+        vm.PlayCommand.Execute(vm.Cells[2]);
+        vm.PlayCommand.Execute(vm.Cells[3]);
+        vm.PlayCommand.Execute(vm.Cells[7]);
         vm.PlayCommand.Execute(vm.Cells[8]);
 
         Assert.True(vm.IsGameOver);
@@ -81,21 +76,14 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void BotWinningMove_ShouldEndGame_AndIncreaseLosses()
+    public void BotWinningSequence_ShouldIncreaseLosses()
     {
         var history = new TestGameHistoryService();
-        var vm = CreateViewModel(history);
-
-        vm.Cells[1].Value = "X";
-        vm.Cells[2].Value = "O";
-        vm.Cells[3].Value = "O";
-        vm.Cells[4].Value = "X";
-        vm.Cells[5].Value = "X";
-        vm.Cells[6].Value = "O";
-        vm.Cells[7].Value = "O";
-        vm.MovesCount = 7;
+        var vm = CreateViewModel(new FakeBotPlayer(3, 4, 5), history);
 
         vm.PlayCommand.Execute(vm.Cells[0]);
+        vm.PlayCommand.Execute(vm.Cells[1]);
+        vm.PlayCommand.Execute(vm.Cells[8]);
 
         Assert.True(vm.IsGameOver);
         Assert.Equal("Le bot a gagne.", vm.StatusMessage);
@@ -109,11 +97,10 @@ public class MainViewModelTests
     public void Restart_ShouldClearBoard_AndKeepHistory()
     {
         var history = new TestGameHistoryService();
-        var vm = CreateViewModel(history);
+        var vm = CreateViewModel(new FakeBotPlayer(3, 4), history);
 
-        vm.Cells[0].Value = "X";
-        vm.Cells[1].Value = "X";
-        vm.MovesCount = 2;
+        vm.PlayCommand.Execute(vm.Cells[0]);
+        vm.PlayCommand.Execute(vm.Cells[1]);
         vm.PlayCommand.Execute(vm.Cells[2]);
 
         vm.RestartCommand.Execute(null);
@@ -128,21 +115,26 @@ public class MainViewModelTests
     [Fact]
     public void PlayingOnNonEmptyCell_ShouldDoNothing()
     {
-        var vm = CreateViewModel();
-        vm.Cells[0].Value = "X";
-        vm.MovesCount = 1;
+        var vm = CreateViewModel(new FakeBotPlayer(1, 2, 3));
+
+        vm.PlayCommand.Execute(vm.Cells[0]);
+        var movesAfterValidTurn = vm.MovesCount;
 
         vm.PlayCommand.Execute(vm.Cells[0]);
 
-        Assert.Equal(1, vm.MovesCount);
+        Assert.Equal(movesAfterValidTurn, vm.MovesCount);
         Assert.Equal(1, vm.Cells.Count(c => c.Value == "X"));
-        Assert.Equal(0, vm.Cells.Count(c => c.Value == "O"));
+        Assert.Equal(1, vm.Cells.Count(c => c.Value == "O"));
         Assert.False(vm.IsGameOver);
     }
 
-    private static MainViewModel CreateViewModel(TestGameHistoryService? history = null)
+    private static MainViewModel CreateViewModel(
+        IBotPlayer? botPlayer = null,
+        TestGameHistoryService? history = null)
     {
-        return new MainViewModel(history ?? new TestGameHistoryService());
+        return new MainViewModel(
+            history ?? new TestGameHistoryService(),
+            botPlayer ?? new FakeBotPlayer());
     }
 
     private sealed class TestGameHistoryService : IGameHistoryService
@@ -156,5 +148,37 @@ public class MainViewModelTests
         public void AddLoss() => Losses++;
 
         public void AddDraw() => Draws++;
+    }
+
+    private sealed class FakeBotPlayer : IBotPlayer
+    {
+        private readonly Queue<int> _plannedMoves;
+
+        public FakeBotPlayer(params int[] plannedMoves)
+        {
+            _plannedMoves = new Queue<int>(plannedMoves);
+        }
+
+        public int? GetNextMoveIndex(IReadOnlyList<GameCell> cells)
+        {
+            while (_plannedMoves.Count > 0)
+            {
+                var move = _plannedMoves.Dequeue();
+                if (move >= 0 && move < cells.Count && string.IsNullOrEmpty(cells[move].Value))
+                {
+                    return move;
+                }
+            }
+
+            for (var i = 0; i < cells.Count; i++)
+            {
+                if (string.IsNullOrEmpty(cells[i].Value))
+                {
+                    return i;
+                }
+            }
+
+            return null;
+        }
     }
 }
