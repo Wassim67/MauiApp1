@@ -35,9 +35,13 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Button Text="Recommencer"
-                Command="{Binding RestartCommand}"
-                HorizontalOptions="Center" />
+        <HorizontalStackLayout Spacing="12"
+                               HorizontalOptions="Center">
+            <Button Text="Rafraîchir"
+                    Command="{Binding RefreshCommand}" />
+            <Button Text="Recommencer"
+                    Command="{Binding RestartCommand}" />
+        </HorizontalStackLayout>
     </VerticalStackLayout>
 
 </ContentPage>

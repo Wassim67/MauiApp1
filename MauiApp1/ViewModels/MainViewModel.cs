@@ -42,15 +42,37 @@ public partial class MainViewModel : ObservableObject
         }
 
         var index = Cells.IndexOf(cell);
-        var game = await _apiClient.PlayMoveAsync(index);
-        ApplyGame(game);
+        await RunApiActionAsync(async () =>
+        {
+            var game = await _apiClient.PlayMoveAsync(index);
+            ApplyGame(game);
+        });
     }
 
     [RelayCommand]
     private async Task Restart()
     {
-        var game = await _apiClient.CreateGameAsync();
-        ApplyGame(game);
+        await RunApiActionAsync(async () =>
+        {
+            var game = await _apiClient.CreateGameAsync();
+            ApplyGame(game);
+        });
+    }
+
+    [RelayCommand]
+    private async Task Refresh()
+    {
+        await RunApiActionAsync(async () =>
+        {
+            var game = await _apiClient.GetCurrentGameAsync();
+            if (game is null)
+            {
+                StatusMessage = "Aucune partie en cours.";
+                return;
+            }
+
+            ApplyGame(game);
+        });
     }
 
     private async Task LoadCurrentGameAsync()
@@ -60,6 +82,22 @@ public partial class MainViewModel : ObservableObject
             var game = await _apiClient.GetCurrentGameAsync() ??
                        await _apiClient.CreateGameAsync();
             ApplyGame(game);
+        }
+        catch
+        {
+            StatusMessage = "API indisponible.";
+        }
+    }
+
+    private async Task RunApiActionAsync(Func<Task> action)
+    {
+        try
+        {
+            await action();
+        }
+        catch (MorpionApiException exception)
+        {
+            StatusMessage = exception.Message;
         }
         catch
         {

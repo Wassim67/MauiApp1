@@ -16,10 +16,10 @@ public class MorpionApiClient
     public async Task<GameDto> CreateGameAsync()
     {
         var response = await _httpClient.PostAsync("/api/morpion/games", null);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response);
 
         return await response.Content.ReadFromJsonAsync<GameDto>() ??
-               throw new InvalidOperationException("La reponse API est vide.");
+               throw new InvalidOperationException("La réponse API est vide.");
     }
 
     public async Task<GameDto?> GetCurrentGameAsync()
@@ -30,7 +30,7 @@ public class MorpionApiClient
             return null;
         }
 
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response);
 
         return await response.Content.ReadFromJsonAsync<GameDto>();
     }
@@ -41,9 +41,22 @@ public class MorpionApiClient
             "/api/morpion/games/current/moves",
             new PlayMoveRequest { Index = index });
 
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response);
 
         return await response.Content.ReadFromJsonAsync<GameDto>() ??
-               throw new InvalidOperationException("La reponse API est vide.");
+               throw new InvalidOperationException("La réponse API est vide.");
+    }
+
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var error = await response.Content.ReadFromJsonAsync<ApiErrorDto>();
+        var message = error?.Detail ?? error?.Message ?? error?.Title ?? "Erreur API.";
+
+        throw new MorpionApiException(message);
     }
 }
