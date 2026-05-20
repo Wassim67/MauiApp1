@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+using MauiApp1.Services;
+using MauiApp1.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace MauiApp1;
 
@@ -14,6 +16,14 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
+
+        builder.Services.AddSingleton(new HttpClient
+        {
+            BaseAddress = new Uri("http://localhost:5056")
+        });
+        builder.Services.AddSingleton<MorpionApiClient>();
+        builder.Services.AddTransient<MainViewModel>();
+        builder.Services.AddTransient<MainPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
