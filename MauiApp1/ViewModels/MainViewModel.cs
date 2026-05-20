@@ -117,11 +117,21 @@ public partial class MainViewModel : ObservableObject
         }
         catch (MorpionApiException exception)
         {
+            await RefreshBoardAsync();
             StatusMessage = exception.Message;
         }
         catch
         {
             StatusMessage = "API indisponible.";
+        }
+    }
+
+    private async Task RefreshBoardAsync()
+    {
+        var game = await _apiClient.GetCurrentGameAsync();
+        if (game is not null)
+        {
+            ApplyGame(game);
         }
     }
 
