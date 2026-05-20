@@ -8,6 +8,8 @@ namespace MauiApp1.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(2);
+
     private readonly MorpionApiClient _apiClient;
 
     public ObservableCollection<GameCell> Cells { get; } = [];
@@ -31,6 +33,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         _ = LoadCurrentGameAsync();
+        _ = StartPollingAsync();
     }
 
     [RelayCommand]
@@ -86,6 +89,23 @@ public partial class MainViewModel : ObservableObject
         catch
         {
             StatusMessage = "API indisponible.";
+        }
+    }
+
+    private async Task StartPollingAsync()
+    {
+        using var timer = new PeriodicTimer(PollingInterval);
+
+        while (await timer.WaitForNextTickAsync())
+        {
+            await RunApiActionAsync(async () =>
+            {
+                var game = await _apiClient.GetCurrentGameAsync();
+                if (game is not null)
+                {
+                    ApplyGame(game);
+                }
+            });
         }
     }
 
