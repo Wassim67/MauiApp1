@@ -11,8 +11,17 @@ public partial class MainViewModel : ObservableObject
     private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(2);
 
     private readonly MorpionApiClient _apiClient;
+    private bool _isPolling;
 
     public ObservableCollection<GameCell> Cells { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAuthPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsGameVisible))]
+    private bool isAuthenticated;
+
+    [ObservableProperty]
+    private bool isBusy;
 
     [ObservableProperty]
     private bool isGameOver;
@@ -21,7 +30,17 @@ public partial class MainViewModel : ObservableObject
     private int movesCount;
 
     [ObservableProperty]
-    private string statusMessage = "Connexion a l'API...";
+    private string email = "player1@test.local";
+
+    [ObservableProperty]
+    private string password = "Password123";
+
+    [ObservableProperty]
+    private string statusMessage = "Connecte-toi pour jouer.";
+
+    public bool IsAuthPanelVisible => !IsAuthenticated;
+
+    public bool IsGameVisible => IsAuthenticated;
 
     public MainViewModel(MorpionApiClient apiClient)
     {
@@ -32,14 +51,47 @@ public partial class MainViewModel : ObservableObject
             Cells.Add(new GameCell());
         }
 
-        _ = LoadCurrentGameAsync();
+        Logout();
         _ = StartPollingAsync();
+    }
+
+    [RelayCommand]
+    private async Task Login()
+    {
+        if (!ValidateCredentials())
+        {
+            return;
+        }
+
+        await RunAuthActionAsync(async () => await _apiClient.LoginAsync(Email, Password));
+    }
+
+    [RelayCommand]
+    private async Task Register()
+    {
+        if (!ValidateCredentials())
+        {
+            return;
+        }
+
+        await RunAuthActionAsync(async () => await _apiClient.RegisterAsync(Email, Password));
+    }
+
+    [RelayCommand]
+    private void Logout()
+    {
+        _apiClient.Logout();
+        IsAuthenticated = false;
+        IsGameOver = false;
+        MovesCount = 0;
+        ClearBoard();
+        StatusMessage = "Connecte-toi pour jouer.";
     }
 
     [RelayCommand]
     private async Task Play(GameCell? cell)
     {
-        if (cell is null || IsGameOver || !string.IsNullOrEmpty(cell.Value))
+        if (!IsAuthenticated || cell is null || IsBusy || IsGameOver || !string.IsNullOrEmpty(cell.Value))
         {
             return;
         }
@@ -55,6 +107,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task Restart()
     {
+        if (!IsAuthenticated)
+        {
+            return;
+        }
+
         await RunApiActionAsync(async () =>
         {
             var game = await _apiClient.CreateGameAsync();
@@ -65,31 +122,48 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task Refresh()
     {
-        await RunApiActionAsync(async () =>
+        if (!IsAuthenticated)
         {
-            var game = await _apiClient.GetCurrentGameAsync();
-            if (game is null)
-            {
-                StatusMessage = "Aucune partie en cours.";
-                return;
-            }
+            return;
+        }
 
-            ApplyGame(game);
-        });
+        await RunApiActionAsync(RefreshCurrentGameAsync);
     }
 
-    private async Task LoadCurrentGameAsync()
+    private async Task RunAuthActionAsync(Func<Task> action)
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+
         try
         {
-            var game = await _apiClient.GetCurrentGameAsync() ??
-                       await _apiClient.CreateGameAsync();
-            ApplyGame(game);
+            await action();
+            IsAuthenticated = true;
+            await LoadCurrentGameAsync();
+        }
+        catch (MorpionApiException exception)
+        {
+            StatusMessage = exception.Message;
         }
         catch
         {
             StatusMessage = "API indisponible.";
         }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task LoadCurrentGameAsync()
+    {
+        var game = await _apiClient.GetCurrentGameAsync() ??
+                   await _apiClient.CreateGameAsync();
+        ApplyGame(game);
     }
 
     private async Task StartPollingAsync()
@@ -98,22 +172,57 @@ public partial class MainViewModel : ObservableObject
 
         while (await timer.WaitForNextTickAsync())
         {
-            await RunApiActionAsync(async () =>
+            if (!IsAuthenticated || IsBusy || _isPolling)
+            {
+                continue;
+            }
+
+            _isPolling = true;
+
+            try
             {
                 var game = await _apiClient.GetCurrentGameAsync();
                 if (game is not null)
                 {
                     ApplyGame(game);
                 }
-            });
+            }
+            catch (MorpionApiException exception) when (exception.IsUnauthorized)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    Logout();
+                    StatusMessage = exception.Message;
+                });
+            }
+            catch
+            {
+                // Le polling est silencieux pour ne pas bloquer l'utilisateur pendant un clic.
+            }
+            finally
+            {
+                _isPolling = false;
+            }
         }
     }
 
     private async Task RunApiActionAsync(Func<Task> action)
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        IsBusy = true;
+
         try
         {
             await action();
+        }
+        catch (MorpionApiException exception) when (exception.IsUnauthorized)
+        {
+            Logout();
+            StatusMessage = exception.Message;
         }
         catch (MorpionApiException exception)
         {
@@ -124,6 +233,23 @@ public partial class MainViewModel : ObservableObject
         {
             StatusMessage = "API indisponible.";
         }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task RefreshCurrentGameAsync()
+    {
+        var game = await _apiClient.GetCurrentGameAsync();
+        if (game is null)
+        {
+            StatusMessage = "Aucune partie en cours.";
+            ClearBoard();
+            return;
+        }
+
+        ApplyGame(game);
     }
 
     private async Task RefreshBoardAsync()
@@ -137,6 +263,12 @@ public partial class MainViewModel : ObservableObject
 
     private void ApplyGame(GameDto game)
     {
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(() => ApplyGame(game));
+            return;
+        }
+
         for (var i = 0; i < Cells.Count; i++)
         {
             Cells[i].Value = i < game.Board.Length ? game.Board[i] : string.Empty;
@@ -145,5 +277,30 @@ public partial class MainViewModel : ObservableObject
         IsGameOver = game.IsGameOver;
         MovesCount = game.MovesCount;
         StatusMessage = game.StatusMessage;
+    }
+
+    private void ClearBoard()
+    {
+        foreach (var cell in Cells)
+        {
+            cell.Value = string.Empty;
+        }
+    }
+
+    private bool ValidateCredentials()
+    {
+        if (string.IsNullOrWhiteSpace(Email))
+        {
+            StatusMessage = "Renseigne ton email.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            StatusMessage = "Renseigne ton mot de passe.";
+            return false;
+        }
+
+        return true;
     }
 }
