@@ -19,7 +19,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton(new HttpClient
         {
-            BaseAddress = new Uri("http://localhost:5056")
+            BaseAddress = new Uri(GetApiBaseAddress())
         });
         builder.Services.AddSingleton<MorpionApiClient>();
         builder.Services.AddTransient<MainViewModel>();
@@ -30,5 +30,14 @@ public static class MauiProgram
 #endif
 
         return builder.Build();
+    }
+
+    private static string GetApiBaseAddress()
+    {
+#if ANDROID
+        return "http://10.0.2.2:5056";
+#else
+        return "http://localhost:5056";
+#endif
     }
 }

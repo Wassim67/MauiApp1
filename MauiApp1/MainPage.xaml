@@ -5,43 +5,97 @@
              xmlns:viewModels="clr-namespace:MauiApp1.ViewModels"
              x:Class="MauiApp1.MainPage"
              x:Name="RootPage"
-             x:DataType="viewModels:MainViewModel">
+             x:DataType="viewModels:MainViewModel"
+             Title="Morpion">
 
-    <VerticalStackLayout Padding="24" Spacing="16">
-        <Label Text="{Binding StatusMessage}"
-               FontSize="24"
-               HorizontalOptions="Center" />
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="18">
+            <Label Text="{Binding StatusMessage}"
+                   FontSize="22"
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
 
-        <CollectionView ItemsSource="{Binding Cells}"
-                        SelectionMode="None"
-                        WidthRequest="286"
-                        HeightRequest="286">
-            <CollectionView.ItemsLayout>
-                <GridItemsLayout Orientation="Vertical"
-                                 Span="3"
-                                 HorizontalItemSpacing="8"
-                                 VerticalItemSpacing="8" />
-            </CollectionView.ItemsLayout>
+            <Border IsVisible="{Binding IsAuthPanelVisible}"
+                    Stroke="#D0D7DE"
+                    StrokeThickness="1"
+                    Padding="18"
+                    MaximumWidthRequest="420"
+                    HorizontalOptions="Center">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8" />
+                </Border.StrokeShape>
 
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:GameCell">
-                    <Button Text="{Binding Value}"
-                            FontSize="36"
-                            WidthRequest="90"
-                            HeightRequest="90"
-                            Command="{Binding Source={x:Reference RootPage}, Path=BindingContext.PlayCommand}"
-                            CommandParameter="{Binding .}" />
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Compte joueur"
+                           FontSize="20"
+                           FontAttributes="Bold" />
 
-        <HorizontalStackLayout Spacing="12"
-                               HorizontalOptions="Center">
-            <Button Text="Rafraîchir"
-                    Command="{Binding RefreshCommand}" />
-            <Button Text="Recommencer"
-                    Command="{Binding RestartCommand}" />
-        </HorizontalStackLayout>
-    </VerticalStackLayout>
+                    <Entry Text="{Binding Email}"
+                           Placeholder="Email"
+                           Keyboard="Email"
+                           ClearButtonVisibility="WhileEditing" />
 
+                    <Entry Text="{Binding Password}"
+                           Placeholder="Mot de passe"
+                           IsPassword="True"
+                           ClearButtonVisibility="WhileEditing" />
+
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="12">
+                        <Button Text="Connexion"
+                                Command="{Binding LoginCommand}" />
+                        <Button Grid.Column="1"
+                                Text="Inscription"
+                                Command="{Binding RegisterCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout IsVisible="{Binding IsGameVisible}"
+                                 Spacing="16"
+                                 HorizontalOptions="Center">
+                <CollectionView ItemsSource="{Binding Cells}"
+                                SelectionMode="None"
+                                WidthRequest="286"
+                                HeightRequest="286">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"
+                                         Span="3"
+                                         HorizontalItemSpacing="8"
+                                         VerticalItemSpacing="8" />
+                    </CollectionView.ItemsLayout>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:GameCell">
+                            <Button Text="{Binding Value}"
+                                    FontSize="36"
+                                    WidthRequest="90"
+                                    HeightRequest="90"
+                                    Command="{Binding Source={x:Reference RootPage}, Path=BindingContext.PlayCommand}"
+                                    CommandParameter="{Binding .}" />
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <Label Text="{Binding MovesCount, StringFormat='Coups joues : {0}'}"
+                       HorizontalOptions="Center" />
+
+                <Grid ColumnDefinitions="*,*,*"
+                      ColumnSpacing="12"
+                      WidthRequest="360">
+                    <Button Text="Rafraichir"
+                            Command="{Binding RefreshCommand}" />
+                    <Button Grid.Column="1"
+                            Text="Recommencer"
+                            Command="{Binding RestartCommand}" />
+                    <Button Grid.Column="2"
+                            Text="Deconnexion"
+                            Command="{Binding LogoutCommand}" />
+                </Grid>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
